@@ -11,7 +11,6 @@ int main(void)
     struct sockaddr_in TCP_server_addres;
     struct sockaddr_in TCP_client_addres;
     int TCP_client_addres_len = sizeof(TCP_client_addres);
-    SOCKET accept_socket;
     char sender_buffer[512] = "Hello from server!";
     int sender_buffer_len = sizeof(sender_buffer) / sizeof(sender_buffer[0]);
     char recive_buffer[512] = {0};
@@ -47,43 +46,41 @@ int main(void)
     }
     printf("Listening success\n");
 
-    accept_socket = accept(TCP_server_socket, (SOCKADDR*)&TCP_client_addres, &TCP_client_addres_len);
-    if (accept_socket == INVALID_SOCKET) {
-        fprintf(stderr, "Accept faild. %d\n", WSAGetLastError());
-        return 1;
-    }
-    printf("Accept success\n");
+    for (;;) {
+        SOCKET client = accept( TCP_server_socket, (SOCKADDR *)&TCP_client_addres, &TCP_client_addres_len);
+        printf("Waiting for response form the client...\n");
 
-    if (send(accept_socket, sender_buffer, sender_buffer_len, 0) == SOCKET_ERROR) {
-        fprintf(stderr, "Sending falid. %d\n", WSAGetLastError());
-        return 1;
-    }
-    printf("Sending success\n");
+        if (client == INVALID_SOCKET) {
+            fprintf(stderr, "accept failed. %d\n", WSAGetLastError());
+            break; // or break if you want to stop the server
+        }
 
-    if (recv(accept_socket, recive_buffer, recive_buffer_len, 0) == SOCKET_ERROR) {
-        fprintf(stderr, "Reciving falid. %d\n", WSAGetLastError());
-        return 1;
-    }
-    printf("Reciving success\nReceived:\n%s\n", recive_buffer);
+        // Handle client (blocking)
+        send(client, sender_buffer, sender_buffer_len, 0);
 
-    if (closesocket(TCP_server_socket) == SOCKET_ERROR) {
-        fprintf(stderr, "Closing sever socket falid. %d\n", WSAGetLastError());
-        return 1;
-    }
-    if (closesocket(accept_socket) == SOCKET_ERROR) {
-        fprintf(stderr, "Closing accepted socket falid. %d\n", WSAGetLastError());
-        return 1;
-    }
-    printf("Closing success\n");
+        int n = recv(client, recive_buffer, recive_buffer_len - 1, 0);
+        if (n > 0) {
+            recive_buffer[n] = '\0';
+            printf("Received: %s\n", recive_buffer);
+        }
 
-    if (WSACleanup() == SOCKET_ERROR) {
-        fprintf(stderr, "Cleanup falid. %d\n", WSAGetLastError());
-        return 1;
+        closesocket(client);
     }
-    printf("Cleanup success\n");
 
-    printf("\nPRESS ANYTHING\n");
-    fgetc(stdin);
+    // if (closesocket(TCP_server_socket) == SOCKET_ERROR) {
+    //     fprintf(stderr, "Closing sever socket falid. %d\n", WSAGetLastError());
+    //     return 1;
+    // }
+    // printf("Closing success\n");
+
+    // if (WSACleanup() == SOCKET_ERROR) {
+    //     fprintf(stderr, "Cleanup falid. %d\n", WSAGetLastError());
+    //     return 1;
+    // }
+    // printf("Cleanup success\n");
+
+    // printf("\nPRESS ANYTHING\n");
+    // fgetc(stdin);
 
     return 0;
 }

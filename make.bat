@@ -66,7 +66,7 @@ if "%CLEANONLY%"=="1" (
   for %%F in (%FILES%) do (
     call :clean "%%~fF" || exit /b !errorlevel!
   )
-  echo [INFO] %~nx0 done!
+  echo [INFO] done!
   exit /b 0
 )
 
@@ -75,7 +75,7 @@ for %%F in (%FILES%) do (
 )
 
 if "%BUILDONLY%"=="1" (
-  echo [INFO] %~nx0 done!
+  echo [INFO] done!
   exit /b 0
 )
 
