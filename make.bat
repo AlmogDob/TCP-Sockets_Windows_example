@@ -21,57 +21,75 @@ set "CSTD=/std:c11"
 
 set "CLINKS= /link ws2_32.lib"
 
-setlocal
+setlocal EnableExtensions EnableDelayedExpansion
 
-if "%~1"=="" (
-  echo Usage: %~nx0 ^<file.c^> [--no-clean^|-nc] [--build-only^|-b] [--clean-only^|-c]
-  echo.
-  echo   --build-only  build only; do not run or clean
-  echo   --clean-only  clean build artifacts for file and exit
-  echo   --no-clean    build+run but do not clean
-  exit /b 1
-)
-
+REM ----------------------------
+REM Parse args: many .c files + flags
+REM ----------------------------
 set "NOCLEAN=0"
 set "BUILDONLY=0"
 set "CLEANONLY=0"
+set "FILES="
 
-REM Parse optional flags in arg2 (simple; extend if you want multiple flags)
-if /i "%~2"=="--no-clean"  set "NOCLEAN=1"
-if /i "%~2"=="-nc"         set "NOCLEAN=1"
-if /i "%~2"=="--build-only" set "BUILDONLY=1"
-if /i "%~2"=="-b"           set "BUILDONLY=1"
-if /i "%~2"=="--clean-only" set "CLEANONLY=1"
-if /i "%~2"=="-c"           set "CLEANONLY=1"
+:parse
+if "%~1"=="" goto doneparse
 
-REM Mutually exclusive sanity check
+REM Flags (you can add more here)
+if /i "%~1"=="--no-clean"   (set "NOCLEAN=1"  & shift & goto parse)
+if /i "%~1"=="-nc"          (set "NOCLEAN=1"  & shift & goto parse)
+if /i "%~1"=="--build-only" (set "BUILDONLY=1" & shift & goto parse)
+if /i "%~1"=="-b"           (set "BUILDONLY=1" & shift & goto parse)
+if /i "%~1"=="--clean-only" (set "CLEANONLY=1" & shift & goto parse)
+if /i "%~1"=="-c"           (set "CLEANONLY=1" & shift & goto parse)
+
+REM Otherwise treat as file
+set "FILES=!FILES! "%~1""
+shift
+goto parse
+
+:doneparse
+
+if "%FILES%"=="" (
+  echo Usage: %~nx0 ^<file1.c^> [file2.c ...] [--no-clean^|-nc] [--build-only^|-b] [--clean-only^|-c]
+  exit /b 1
+)
+
 if "%BUILDONLY%"=="1" if "%CLEANONLY%"=="1" (
   echo Error: --build-only and --clean-only cannot be used together.
   exit /b 1
 )
 
+REM ----------------------------
+REM Perform requested action on all files
+REM ----------------------------
 if "%CLEANONLY%"=="1" (
-  call :clean "%~1" || exit /b %errorlevel%
-  endlocal
+  for %%F in (%FILES%) do (
+    call :clean "%%~fF" || exit /b !errorlevel!
+  )
   echo [INFO] %~nx0 done!
   exit /b 0
 )
 
-call :build "%~1" || exit /b %errorlevel%
+for %%F in (%FILES%) do (
+  call :build "%%~fF" || exit /b !errorlevel!
+)
 
 if "%BUILDONLY%"=="1" (
-  endlocal
   echo [INFO] %~nx0 done!
   exit /b 0
 )
 
-call :run "%~1" || exit /b %errorlevel%
-if "%NOCLEAN%"=="0" (
-  call :clean "%~1"
+for %%F in (%FILES%) do (
+  call :run "%%~fF" || exit /b !errorlevel!
 )
 
-endlocal
-echo [INFO] %~nx0 done!
+if "%NOCLEAN%"=="0" (
+  for %%F in (%FILES%) do (
+    call :clean "%%~fF"
+  )
+)
+
+echo [INFO] done!
 exit /b 0
 
 
